@@ -172,7 +172,11 @@ export function explainMetaError(
   }
 
   // --- Permissions --------------------------------------------------------
-  if (code === 10 || (code !== null && code >= 200 && code <= 299)) {
+  if (
+    code === 10 ||
+    (code !== null && code >= 200 && code <= 299) ||
+    (code === 100 && /need permission on either whatsapp business account/i.test(err.message))
+  ) {
     return build(
       `The access token is not allowed to perform this action (${STEP_LABEL[step]}). ` +
         'Its System User needs the whatsapp_business_management and whatsapp_business_messaging ' +

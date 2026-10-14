@@ -88,4 +88,36 @@ describe('parseContactCsv', () => {
       ],
     });
   });
+
+  it('parses a UTF-8 BOM and quoted headers', () => {
+    expect(
+      parseContactCsv('\uFEFF"phone","name"\r\n"+15551234567","Ada"')
+    ).toMatchObject({
+      hasPhoneColumn: true,
+      rows: [{ phone: '+15551234567', name: 'Ada' }],
+    });
+  });
+
+  it('parses escaped quotes, commas, and newlines inside quoted fields', () => {
+    const csv = `phone,name,company
++15551234567,"Ada ""Countess"", Lovelace","Analytical
+Engines, Inc."`;
+
+    expect(parseContactCsv(csv).rows).toEqual([
+      {
+        phone: '+15551234567',
+        name: 'Ada "Countess", Lovelace',
+        email: undefined,
+        company: 'Analytical\nEngines, Inc.',
+        tagNames: [],
+      },
+    ]);
+  });
+
+  it('preserves apostrophes in contact values', () => {
+    const csv = `phone,name
++15551234567,O'Connor`;
+
+    expect(parseContactCsv(csv).rows[0].name).toBe("O'Connor");
+  });
 });

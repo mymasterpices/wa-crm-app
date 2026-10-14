@@ -47,8 +47,8 @@ export interface ParseContactCsvResult {
 }
 
 export function parseContactCsv(text: string): ParseContactCsvResult {
-  const lines = text.trim().split(/\r?\n/);
-  if (lines.length < 2) {
+  const records = parseCsvRecords(text);
+  if (records.length < 2) {
     return {
       rows: [],
       hasPhoneColumn: false,
@@ -57,9 +57,9 @@ export function parseContactCsv(text: string): ParseContactCsvResult {
     };
   }
 
-  const headers = lines[0]
-    .split(',')
-    .map((h) => h.trim().toLowerCase().replace(/["']/g, ''));
+  const headers = records[0].map((header, index) =>
+    (index === 0 ? header.replace(/^\uFEFF/, '') : header).trim().toLowerCase()
+  );
 
   const phoneIdx = headers.indexOf('phone');
   if (phoneIdx === -1) {
@@ -78,35 +78,23 @@ export function parseContactCsv(text: string): ParseContactCsvResult {
 
   const rows: ParsedContactRow[] = [];
 
-  for (let i = 1; i < lines.length; i++) {
-    const line = lines[i].trim();
-    if (!line) continue;
-
-    const values = parseCsvLine(line);
+  for (const values of records.slice(1)) {
+    if (values.every((value) => !value.trim())) continue;
     // A row with no usable phone is pushed through rather than dropped
     // here — dedupeByPhone (shared with the webhook/manual-form paths)
     // already treats an empty normalized key as invalid, and counting
     // it there means the import result can tell the user "N contacts
     // had no phone" instead of the row just vanishing with the total
     // row count silently short of what's actually in the file.
-    const phone = values[phoneIdx]?.replace(/["']/g, '').trim() ?? '';
+    const phone = values[phoneIdx]?.trim() ?? '';
 
     rows.push({
       phone,
-      name:
-        nameIdx >= 0
-          ? values[nameIdx]?.replace(/["']/g, '').trim() || undefined
-          : undefined,
-      email:
-        emailIdx >= 0
-          ? values[emailIdx]?.replace(/["']/g, '').trim() || undefined
-          : undefined,
+      name: nameIdx >= 0 ? values[nameIdx]?.trim() || undefined : undefined,
+      email: emailIdx >= 0 ? values[emailIdx]?.trim() || undefined : undefined,
       company:
-        companyIdx >= 0
-          ? values[companyIdx]?.replace(/["']/g, '').trim() || undefined
-          : undefined,
-      tagNames:
-        tagsIdx >= 0 ? parseTagCell(values[tagsIdx]?.replace(/["']/g, '')) : [],
+        companyIdx >= 0 ? values[companyIdx]?.trim() || undefined : undefined,
+      tagNames: tagsIdx >= 0 ? parseTagCell(values[tagsIdx]) : [],
     });
   }
 
@@ -118,22 +106,36 @@ export function parseContactCsv(text: string): ParseContactCsvResult {
   };
 }
 
-/** Simple CSV line parse (handles quoted fields). */
-function parseCsvLine(line: string): string[] {
-  const values: string[] = [];
-  let current = '';
+/** Parse CSV records, including escaped quotes and newlines in quoted fields. */
+function parseCsvRecords(text: string): string[][] {
+  const records: string[][] = [];
+  let record: string[] = [];
+  let value = '';
   let inQuotes = false;
 
-  for (const char of line) {
-    if (char === '"') {
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i];
+
+    if (char === '"' && inQuotes && text[i + 1] === '"') {
+      value += '"';
+      i++;
+    } else if (char === '"') {
       inQuotes = !inQuotes;
     } else if (char === ',' && !inQuotes) {
-      values.push(current.trim());
-      current = '';
+      record.push(value);
+      value = '';
+    } else if ((char === '\n' || char === '\r') && !inQuotes) {
+      record.push(value);
+      if (record.some((field) => field.trim())) records.push(record);
+      record = [];
+      value = '';
+      if (char === '\r' && text[i + 1] === '\n') i++;
     } else {
-      current += char;
+      value += char;
     }
   }
-  values.push(current.trim());
-  return values;
+
+  record.push(value);
+  if (record.some((field) => field.trim())) records.push(record);
+  return records;
 }

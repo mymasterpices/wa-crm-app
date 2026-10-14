@@ -836,7 +836,7 @@
         "csvInvalidPhones": "{count} row(s) skipped: phone numbers must start with + and a country code (e.g. +14155550123).",
         "errorLoadTags": "Failed to load tags",
         "errorLoadFields": "Failed to load custom fields",
-        "errorCsvParse": "Could not parse CSV file.",
+        "errorCsvParse": "No valid phone numbers found. Include + and a country code (for example, +14155550123).",
         "errorCsvMissingPhone": "CSV must have a 'phone' column.",
         "audienceSummary": "Audience Summary",
         "calculating": "Calculating…",

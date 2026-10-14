@@ -59,6 +59,19 @@ describe("explainMetaError — permissions", () => {
     expect(x.summary).toMatch(/Phone Number ID 123456789/);
     expect(x.summary).toMatch(/Assign the System User/);
   });
+
+  it("maps code 100 with 'Need permission on either WhatsApp Business Account' to permission explanation", () => {
+    const x = explainMetaError(
+      metaErr({
+        code: 100,
+        message: "(#100) Need permission on either WhatsApp Business Account or owner/shared business.",
+      }),
+      "subscribe_waba",
+    );
+    expect(x.field).toBe("access_token");
+    expect(x.side).toBe("user");
+    expect(x.summary).toMatch(/whatsapp_business_management and whatsapp_business_messaging/);
+  });
 });
 
 describe("explainMetaError — wrong object ids", () => {

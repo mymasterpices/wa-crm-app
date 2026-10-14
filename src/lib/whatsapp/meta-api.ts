@@ -35,6 +35,8 @@ interface MetaErrorResponse {
     error_subcode?: number
     type?: string
     fbtrace_id?: string
+    error_user_title?: string
+    error_user_msg?: string
     /** WhatsApp-specific envelope — `details` is the human-readable part. */
     error_data?: { messaging_product?: string; details?: string }
   }
@@ -91,7 +93,12 @@ async function readMetaError(response: Response, fallback: string): Promise<Meta
   try {
     const data = (await response.json()) as MetaErrorResponse
     envelope = data.error
-    if (envelope?.message) message = envelope.message
+    if (envelope?.message) {
+      const details = envelope.error_data?.details || envelope.error_user_msg
+      message = details && !envelope.message.includes(details)
+        ? `${envelope.message} — ${details}`
+        : envelope.message
+    }
   } catch {
     // response body wasn't JSON — keep the fallback
   }

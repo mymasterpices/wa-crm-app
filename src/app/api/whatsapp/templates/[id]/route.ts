@@ -256,29 +256,32 @@ export async function DELETE(
       return NextResponse.json({ error: t('templates.notFound') }, { status: 404 })
     }
 
-    if (existing.meta_template_id && !isDryRun()) {
-      const { data: config, error: configError } = await supabase
+    const isRealMetaId =
+      existing.meta_template_id && !existing.meta_template_id.startsWith('dry-run-')
+    if (isRealMetaId && !isDryRun()) {
+      const { data: config } = await supabase
         .from('whatsapp_config')
         .select('*')
         .eq('account_id', accountId)
         .single()
-      if (configError || !config || !config.waba_id) {
-        return NextResponse.json(
-          { error: t('templates.notConfiguredDelete') },
-          { status: 400 },
-        )
-      }
-      const accessToken = decrypt(config.access_token)
-      try {
-        await deleteMessageTemplate({
-          wabaId: config.waba_id,
-          accessToken,
-          name: existing.name,
-          metaTemplateId: existing.meta_template_id,
-        })
-      } catch (e) {
-        const message = e instanceof Error ? e.message : t('templates.metaDeleteFailed')
-        return NextResponse.json({ error: message }, { status: 502 })
+      if (config?.waba_id && config?.access_token) {
+        try {
+          const accessToken = decrypt(config.access_token)
+          await deleteMessageTemplate({
+            wabaId: config.waba_id,
+            accessToken,
+            name: existing.name,
+            metaTemplateId: existing.meta_template_id,
+          })
+        } catch (e) {
+          // If Meta deletion fails (e.g. template was already deleted on Meta, or
+          // permission denied), log a warning but still proceed with local deletion
+          // so the user isn't stuck with an undeletable row in their CRM dashboard.
+          console.warn(
+            `[templates] Meta delete failed for ${existing.name} (${existing.meta_template_id}); proceeding with local deletion:`,
+            e,
+          )
+        }
       }
     }
 

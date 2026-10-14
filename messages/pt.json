@@ -836,7 +836,7 @@
         "csvInvalidPhones": "{count} linha(s) ignorada(s): os números de telefone devem começar com + e o código do país (ex.: +5511999990000).",
         "errorLoadTags": "Falha ao carregar as tags",
         "errorLoadFields": "Falha ao carregar os campos personalizados",
-        "errorCsvParse": "Não foi possível ler o arquivo CSV.",
+        "errorCsvParse": "Nenhum número de telefone válido encontrado. Inclua + e o código do país (por exemplo, +5511999990000).",
         "errorCsvMissingPhone": "O CSV deve ter uma coluna 'phone'.",
         "audienceSummary": "Resumo do público",
         "calculating": "Calculando…",
